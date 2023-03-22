@@ -3,6 +3,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -46,7 +47,10 @@ public class OnlineCoursesAnalyzer {
 
     //1
     public Map<String, Integer> getPtcpCountByInst() {
-        return null;
+        Map<String, Integer> ptcpCountByInst = courses.stream()
+                .collect(Collectors.groupingBy(Course::getInstitution,
+                        Collectors.summingInt(Course::getParticipants)));
+        return ptcpCountByInst;
     }
 
     //2
@@ -101,6 +105,98 @@ class Course {
     double percentFemale;
     double percentDegree;
 
+    public String getInstitution() {
+        return institution;
+    }
+
+    public String getNumber() {
+        return number;
+    }
+
+    public Date getLaunchDate() {
+        return launchDate;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getInstructors() {
+        return instructors;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public int getYear() {
+        return year;
+    }
+
+    public int getHonorCode() {
+        return honorCode;
+    }
+
+    public int getParticipants() {
+        return participants;
+    }
+
+    public int getAudited() {
+        return audited;
+    }
+
+    public int getCertified() {
+        return certified;
+    }
+
+    public double getPercentAudited() {
+        return percentAudited;
+    }
+
+    public double getPercentCertified() {
+        return percentCertified;
+    }
+
+    public double getPercentCertified50() {
+        return percentCertified50;
+    }
+
+    public double getPercentVideo() {
+        return percentVideo;
+    }
+
+    public double getPercentForum() {
+        return percentForum;
+    }
+
+    public double getGradeHigherZero() {
+        return gradeHigherZero;
+    }
+
+    public double getTotalHours() {
+        return totalHours;
+    }
+
+    public double getMedianHoursCertification() {
+        return medianHoursCertification;
+    }
+
+    public double getMedianAge() {
+        return medianAge;
+    }
+
+    public double getPercentMale() {
+        return percentMale;
+    }
+
+    public double getPercentFemale() {
+        return percentFemale;
+    }
+
+    public double getPercentDegree() {
+        return percentDegree;
+    }
+
     public Course(String institution, String number, Date launchDate,
                   String title, String instructors, String subject,
                   int year, int honorCode, int participants,
@@ -139,5 +235,7 @@ class Course {
         this.percentMale = percentMale;
         this.percentFemale = percentFemale;
         this.percentDegree = percentDegree;
+
+
     }
 }

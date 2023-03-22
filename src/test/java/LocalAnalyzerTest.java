@@ -103,7 +103,7 @@ public class LocalAnalyzerTest {
             Method method = courseAnalyzerClass.getMethod("getPtcpCountByInst");
             Object res = method.invoke(courseInfo);
             assertTrue(res instanceof Map<?, ?>);
-            String expected = Files.readString(Paths.get("resources", "local_answer", "Q1.txt"),
+            String expected = Files.readString(Paths.get("src", "main/resources/local_answer", "Q1.txt"),
                             StandardCharsets.UTF_8)
                     .replace("\r", "").strip();
             assertEquals(expected, mapToString(res));
