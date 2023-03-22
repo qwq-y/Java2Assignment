@@ -55,7 +55,37 @@ public class OnlineCoursesAnalyzer {
 
     //2
     public Map<String, Integer> getPtcpCountByInstAndSubject() {
-        return null;
+        Map<Map.Entry<String, String>, Integer> mapMap = courses.stream()
+                .collect(Collectors.groupingBy(
+                        c -> Map.entry(c.getInstitution(), c.getSubject()),
+                        Collectors.summingInt(Course::getParticipants)));
+
+        List<Map.Entry<Map.Entry<String, String>, Integer>> mapList = new ArrayList<>(mapMap.entrySet());
+        mapList.sort((o1, o2) -> {
+            int firstCompare = o2.getValue().compareTo(o1.getValue());
+            if (firstCompare == 0) {
+                int secondCompare = o1.getKey().getKey().compareTo(o2.getKey().getKey());
+                if (secondCompare == 0) {
+                    return o1.getKey().getValue().compareTo(o2.getKey().getValue());
+                } else {
+                    return secondCompare;
+                }
+            } else {
+                return firstCompare;
+            }
+        });
+
+        LinkedHashMap<Map.Entry<String, String>, Integer> linkedMapMap = new LinkedHashMap<>();
+        mapList.forEach(entry -> linkedMapMap.put(entry.getKey(), entry.getValue()));
+
+        LinkedHashMap<String, Integer> linkedStrMap = new LinkedHashMap<>();
+        linkedMapMap.forEach((key, value) -> {
+//            String newKey = key.getKey() + "-" + key.getValue().substring(1, key.getValue().length()-1);
+            String newKey = key.getKey() + "-" + key.getValue();
+            linkedStrMap.put(newKey, value);
+        });
+
+        return linkedStrMap;
     }
 
     //3
