@@ -95,7 +95,6 @@ public class OnlineCoursesAnalyzer {
     }
 
     //3
-    // 课程名字去重
     public Map<String, List<List<String>>> getCourseListOfInstructor() {
         courses.forEach(c -> isCourseIndividual(c));
 
@@ -135,62 +134,78 @@ public class OnlineCoursesAnalyzer {
 
     //4
     public List<String> getCourses(int topK, String by) {
-        Map<Map.Entry<String, String>, ? extends Number> idtitleByMap = new HashMap<>();
-        if (by == "hours") {
-            idtitleByMap = courses.stream()
-                    .collect(Collectors.toMap(
-                            course -> Map.entry(course.getNumber(), course.getTitle()),
-                            Course::getTotalHours
-                    ));
-        } else if(by == "participants") {
-            idtitleByMap = courses.stream()
-                    .collect(Collectors.toMap(
-                            course -> Map.entry(course.getNumber(), course.getTitle()),
-                            Course::getParticipants
-                    ));
-        } else {
-            return null;
+//        Map<Map.Entry<String, String>, ? extends Number> idtitleByMap = new HashMap<>();
+//        if (by == "hours") {
+//            idtitleByMap = courses.stream()
+//                    .collect(Collectors.toMap(
+//                            course -> Map.entry(course.getNumber(), course.getTitle()),
+//                            Course::getTotalHours
+//                    ));
+//        } else if(by == "participants") {
+//            idtitleByMap = courses.stream()
+//                    .collect(Collectors.toMap(
+//                            course -> Map.entry(course.getNumber(), course.getTitle()),
+//                            Course::getParticipants
+//                    ));
+//        } else {
+//            return null;
+//        }
+//
+//        List<Map.Entry<Map.Entry<String, String>, ? extends Number>> idtitleByList = new ArrayList<>(idtitleByMap.entrySet());
+//        idtitleByList.sort((o1, o2) -> {
+//            double firstCompare = o2.getValue().doubleValue() - o1.getValue().doubleValue();
+//            if (firstCompare == 0.0) {
+//                return o1.getKey().getValue().compareTo(o2.getKey().getValue());
+//            } else {
+//                if (firstCompare > 0.0) {
+//                    return 1;
+//                } else if (firstCompare < 0.0) {
+//                    return -1;
+//                } else {
+//                    return 0;
+//                }
+//            }
+//        });
+//
+//        List<String> titleList = new ArrayList<>();
+//        int i = 0;
+//        int j = 0;
+//        while (i < topK) {
+//            String title = idtitleByList.get(j++).getKey().getValue();
+//            if (!titleList.contains(title)) {
+//                titleList.add(title);
+//                i++;
+//            }
+//        }
+//
+//        return titleList;
+
+        List<String> topKCourses = null;
+        if (by.equals("hours")) {
+            topKCourses = courses.stream()
+                    .sorted(Comparator.comparing(Course::getTotalHours).reversed()
+                            .thenComparing(Course::getTitle))
+                    .map(Course::getTitle)
+                    .distinct()
+                    .limit(topK)
+                    .collect(Collectors.toList());
+
+        } else if (by.equals("participants")) {
+            topKCourses = courses.stream()
+                    .sorted(Comparator.comparing(Course::getParticipants).reversed()
+                            .thenComparing(Course::getTitle))
+                    .map(Course::getTitle)
+                    .distinct()
+                    .limit(topK)
+                    .collect(Collectors.toList());
         }
 
-        List<Map.Entry<Map.Entry<String, String>, ? extends Number>> idtitleByList = new ArrayList<>(idtitleByMap.entrySet());
-        idtitleByList.sort((o1, o2) -> {
-            double firstCompare = o2.getValue().doubleValue() - o1.getValue().doubleValue();
-            if (firstCompare == 0.0) {
-                return o1.getKey().getValue().compareTo(o2.getKey().getValue());
-            } else {
-                if (firstCompare > 0.0) {
-                    return 1;
-                } else if (firstCompare < 0.0) {
-                    return -1;
-                } else {
-                    return 0;
-                }
-            }
-        });
+//        topKCourses.forEach(s -> System.out.println(s));
 
-        List<String> titleList = new ArrayList<>();
-        int i = 0;
-        int j = 0;
-        while (i < topK) {
-            String title = idtitleByList.get(j++).getKey().getValue();
-            if (!titleList.contains(title)) {
-                titleList.add(title);
-                i++;
-            }
-        }
-
-        return titleList;
+        return topKCourses;
     }
 
     //5
-
-    /**
-     * 筛选，去重，排序
-     * @param courseSubject
-     * @param percentAudited
-     * @param totalCourseHours
-     * @return
-     */
     public List<String> searchCourses(String courseSubject, double percentAudited, double totalCourseHours) {
         Pattern pattern = Pattern.compile(courseSubject, Pattern.CASE_INSENSITIVE);
 
@@ -208,9 +223,49 @@ public class OnlineCoursesAnalyzer {
 
     //6
     public List<String> recommendCourses(int age, int gender, int isBachelorOrHigher) {
-        return null;
+        List<CourseSimilarity> courseSimilarities = new ArrayList<>();
+        courses.forEach(c -> {
+            CourseSimilarity courseSimilarity = new CourseSimilarity(c.getNumber(), c.getTitle(), c.getSimilarity(age, gender, isBachelorOrHigher));
+            courseSimilarities.add(courseSimilarity);
+        });
+
+        List<String> recommendedCourses = courseSimilarities.stream()
+                .sorted(Comparator.comparing(CourseSimilarity::getSimilarity)
+                        .thenComparing(CourseSimilarity::getTitle))
+                .map(CourseSimilarity::getTitle)
+                .distinct()
+                .limit(10)
+                .collect(Collectors.toList());
+
+        recommendedCourses.forEach(s -> System.out.println(s));
+
+        return recommendedCourses;
     }
 
+}
+
+class CourseSimilarity {
+    private String courseNumber;
+    private String title;
+    private double similarity;
+
+    public CourseSimilarity(String courseNumber, String title, double similarity) {
+        this.courseNumber = courseNumber;
+        this.title = title;
+        this.similarity = similarity;
+    }
+
+    public String getCourseNumber() {
+        return courseNumber;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public double getSimilarity() {
+        return similarity;
+    }
 }
 
 class Course {
@@ -239,6 +294,13 @@ class Course {
     double percentDegree;
 
     boolean isIndividual;
+
+    public double getSimilarity(int age, int gender, int isBachelorOrHigher) {
+        double similarity = Math.pow((age - medianAge), 2) +
+                Math.pow((100*gender - percentMale*participants), 2) +
+                Math.pow((100*isBachelorOrHigher - percentDegree*participants), 2);
+        return similarity;
+    }
 
     public String getInstitution() {
         return institution;
@@ -370,7 +432,5 @@ class Course {
         this.percentMale = percentMale;
         this.percentFemale = percentFemale;
         this.percentDegree = percentDegree;
-
-
     }
 }
