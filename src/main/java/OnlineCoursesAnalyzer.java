@@ -3,6 +3,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -88,19 +89,121 @@ public class OnlineCoursesAnalyzer {
         return linkedStrMap;
     }
 
-    //3
-    public Map<String, List<List<String>>> getCourseListOfInstructor() {
-        return null;
+    public void isCourseIndividual(Course c) {
+        String[] instructors = c.getInstructors().split(",");
+        c.isIndividual = instructors.length > 1 ? false : true;
     }
+
+    //3
+    // 课程名字去重
+    public Map<String, List<List<String>>> getCourseListOfInstructor() {
+        courses.forEach(c -> isCourseIndividual(c));
+
+        Map<String, List<Course>> strListMap = courses.stream()
+                .flatMap(person -> Arrays.stream(person.getInstructors().split(", ")).map(name -> new AbstractMap.SimpleEntry<>(name, person)))
+                .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+
+        List<Map.Entry<String, List<Course>>> strListList = new ArrayList<>(strListMap.entrySet());
+//        strListList.sort(Comparator.comparing(Map.Entry::getKey));
+
+        LinkedHashMap<String, List<List<String>>> linkedStrListMap = new LinkedHashMap<>();
+        strListList.forEach(entry -> {
+            List<String> indpdt = new ArrayList<>();
+            List<String> dpdt = new ArrayList<>();
+            entry.getValue().forEach(c -> {
+                String title = c.getTitle();
+                if (c.isIndividual) {
+                    if (!indpdt.contains(title)) {
+                        indpdt.add(title);
+                    }
+                } else {
+                    if (!dpdt.contains(title)) {
+                        dpdt.add(title);
+                    }
+                }
+            });
+            Collections.sort(indpdt);
+            Collections.sort(dpdt);
+            if (indpdt.size() > 0 || dpdt.size() > 0) {
+                linkedStrListMap.put(entry.getKey(), List.of(indpdt, dpdt));
+            }
+        });
+
+        return linkedStrListMap;
+    }
+
 
     //4
     public List<String> getCourses(int topK, String by) {
-        return null;
+        Map<Map.Entry<String, String>, ? extends Number> idtitleByMap = new HashMap<>();
+        if (by == "hours") {
+            idtitleByMap = courses.stream()
+                    .collect(Collectors.toMap(
+                            course -> Map.entry(course.getNumber(), course.getTitle()),
+                            Course::getTotalHours
+                    ));
+        } else if(by == "participants") {
+            idtitleByMap = courses.stream()
+                    .collect(Collectors.toMap(
+                            course -> Map.entry(course.getNumber(), course.getTitle()),
+                            Course::getParticipants
+                    ));
+        } else {
+            return null;
+        }
+
+        List<Map.Entry<Map.Entry<String, String>, ? extends Number>> idtitleByList = new ArrayList<>(idtitleByMap.entrySet());
+        idtitleByList.sort((o1, o2) -> {
+            double firstCompare = o2.getValue().doubleValue() - o1.getValue().doubleValue();
+            if (firstCompare == 0.0) {
+                return o1.getKey().getValue().compareTo(o2.getKey().getValue());
+            } else {
+                if (firstCompare > 0.0) {
+                    return 1;
+                } else if (firstCompare < 0.0) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            }
+        });
+
+        List<String> titleList = new ArrayList<>();
+        int i = 0;
+        int j = 0;
+        while (i < topK) {
+            String title = idtitleByList.get(j++).getKey().getValue();
+            if (!titleList.contains(title)) {
+                titleList.add(title);
+                i++;
+            }
+        }
+
+        return titleList;
     }
 
     //5
+
+    /**
+     * 筛选，去重，排序
+     * @param courseSubject
+     * @param percentAudited
+     * @param totalCourseHours
+     * @return
+     */
     public List<String> searchCourses(String courseSubject, double percentAudited, double totalCourseHours) {
-        return null;
+        Pattern pattern = Pattern.compile(courseSubject, Pattern.CASE_INSENSITIVE);
+
+        List<String> result = courses.stream()
+                .filter(course -> pattern.matcher(course.getSubject()).find())
+                .filter(course -> course.getPercentAudited() >= percentAudited)
+                .filter(course -> course.getTotalHours() <= totalCourseHours)
+                .map(Course::getTitle)
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+
+        return result;
     }
 
     //6
@@ -134,6 +237,8 @@ class Course {
     double percentMale;
     double percentFemale;
     double percentDegree;
+
+    boolean isIndividual;
 
     public String getInstitution() {
         return institution;
