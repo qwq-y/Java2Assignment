@@ -199,9 +199,6 @@ public class OnlineCoursesAnalyzer {
                     .limit(topK)
                     .collect(Collectors.toList());
         }
-
-//        topKCourses.forEach(s -> System.out.println(s));
-
         return topKCourses;
     }
 
@@ -221,13 +218,35 @@ public class OnlineCoursesAnalyzer {
         return result;
     }
 
-    //6
+    // 6
     public List<String> recommendCourses(int age, int gender, int isBachelorOrHigher) {
+//        System.out.println("age: " + age + "\tgender: " + gender + "\tisBachelorOrHigher: " + isBachelorOrHigher + "\n");
+
+        // the latest title for a course number
+        Map<String, Course> latestCourses = courses.stream()
+                .collect(Collectors.groupingBy(Course::getNumber,
+                        Collectors.maxBy(Comparator.comparing(Course::getLaunchDate))))
+                .values().stream().collect(Collectors.toMap(c -> c.get().getNumber(), c -> c.get()));
+
+        // calculate average similarity (group by number)
+        Map<String, Double> averageSimilarities = courses.stream()
+                .collect(Collectors.groupingBy(
+                        Course::getNumber,
+                        Collectors.averagingDouble(c -> c.getSimilarity(age, gender, isBachelorOrHigher))
+                ));
+
+        // only latest reserved
         List<CourseSimilarity> courseSimilarities = new ArrayList<>();
-        courses.forEach(c -> {
-            CourseSimilarity courseSimilarity = new CourseSimilarity(c.getNumber(), c.getTitle(), c.getSimilarity(age, gender, isBachelorOrHigher));
-            courseSimilarities.add(courseSimilarity);
-        });
+        for (Map.Entry<String, Double> entry : averageSimilarities.entrySet()) {
+            String number = entry.getKey();
+            Double avgSimilarity = entry.getValue();
+            if (latestCourses.containsKey(number)) {
+                Course latestCourse = latestCourses.get(number);
+                CourseSimilarity courseSimilarity = new CourseSimilarity(latestCourse.getTitle(), latestCourse.getTitle(),
+                        avgSimilarity);
+                courseSimilarities.add(courseSimilarity);
+            }
+        }
 
         List<String> recommendedCourses = courseSimilarities.stream()
                 .sorted(Comparator.comparing(CourseSimilarity::getSimilarity)
@@ -237,11 +256,11 @@ public class OnlineCoursesAnalyzer {
                 .limit(10)
                 .collect(Collectors.toList());
 
-        recommendedCourses.forEach(s -> System.out.println(s));
+
+//        recommendedCourses.forEach(System.out::println);
 
         return recommendedCourses;
     }
-
 }
 
 class CourseSimilarity {
@@ -297,8 +316,8 @@ class Course {
 
     public double getSimilarity(int age, int gender, int isBachelorOrHigher) {
         double similarity = Math.pow((age - medianAge), 2) +
-                Math.pow((100*gender - percentMale*participants), 2) +
-                Math.pow((100*isBachelorOrHigher - percentDegree*participants), 2);
+                Math.pow((100*gender - percentMale), 2) +
+                Math.pow((100*isBachelorOrHigher - percentDegree), 2);
         return similarity;
     }
 
